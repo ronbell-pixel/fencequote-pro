@@ -15,6 +15,13 @@
       "when": 1786899000000,
       "tag": "0001_saas_v11",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793289600000,
+      "tag": "0002_esign_audit",
+      "breakpoints": true
     }
   ]
 }

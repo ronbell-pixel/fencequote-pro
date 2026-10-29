@@ -54,3 +54,23 @@ test("keeps customer and estimate operations wired into the product", async () =
   assert.match(estimatesRoute, /export async function PATCH/);
   assert.match(estimatesRoute, /estimate_status_changed/);
 });
+
+test("keeps customer e-signature wired end to end", async () => {
+  const [page, signer, pad, acceptance, esign, app] = await Promise.all([
+    readFile(new URL("../app/p/[token]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/SignProposal.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/SignaturePad.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/acceptance/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/esign.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/FenceQuoteApp.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /recordView/);
+  assert.match(signer, /Accept & sign/);
+  assert.match(signer, /Signature certificate/);
+  assert.match(pad, /toDataURL\("image\/png"\)/);
+  assert.match(acceptance, /consent !== true/);
+  assert.match(acceptance, /expired/);
+  assert.match(acceptance, /cf-connecting-ip/);
+  assert.match(esign, /SHA-256/);
+  assert.match(app, /CUSTOMER E-SIGNATURE/);
+});

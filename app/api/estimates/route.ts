@@ -1,6 +1,21 @@
 import { apiError, db, id, now, requireSession } from "../../../lib/tenant";
+import { ensureEsignSchema, ensureSigningToken } from "../../../lib/esign";
 type SectionInput={name:string;description:string;length:number;materialId:string;notes?:string};
 const estimateStatuses=["draft","ready","sent","viewed","approved","declined"] as const;
+
+/** Signing link, signature record, and customer activity for one estimate. */
+export async function GET(request:Request){
+ try{
+  const url=new URL(request.url),session=await requireSession(request,url.searchParams.get("company"),url.searchParams.get("asRole")),estimateId=url.searchParams.get("estimateId")??"";
+  await ensureEsignSchema();const d1=db();
+  const estimate=await d1.prepare("SELECT id FROM estimates WHERE id=? AND company_id=?").bind(estimateId,session.companyId).first<any>();
+  if(!estimate)return Response.json({error:"Estimate not found"},{status:404});
+  const token=await ensureSigningToken(session.companyId,estimate.id,session.userId);
+  const signature=await d1.prepare("SELECT a.customer_name,a.signer_email,a.signature,a.signature_method,a.signature_image,a.document_hash,a.ip_address,a.user_agent,a.approved_amount,a.accepted_at,a.decision,a.decline_reason FROM quote_acceptances a JOIN estimate_versions v ON v.id=a.version_id AND v.company_id=a.company_id WHERE v.approval_token=? AND a.company_id=?").bind(token,session.companyId).first<any>();
+  const activity=(await d1.prepare("SELECT action,metadata,created_at FROM activity_log WHERE estimate_id=? AND company_id=? ORDER BY created_at DESC LIMIT 20").bind(estimate.id,session.companyId).all()).results;
+  return Response.json({signingPath:`/p/${token}`,signature:signature??null,activity},{headers:{"Cache-Control":"no-store"}});
+ }catch(error){return apiError(error)}
+}
 
 export async function PATCH(request:Request){
  try{
@@ -30,7 +45,7 @@ export async function POST(request:Request){
    d1.prepare("INSERT INTO estimates (id,company_id,estimate_number,customer_id,assigned_user_id,status,version,discount_type,discount_value,discount_pct,approval_status,tax_rate,subtotal,total,deposit,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(estimateId,session.companyId,num,body.customerId,session.userId,requiresApproval?"draft":body.finalize?"ready":"draft",1,discountType,discountValue,discountType==="percentage"?discountValue:baseSubtotal?discount/baseSubtotal*100:0,requiresApproval?"required":"not_required",settings.sales_tax,subtotal,total,total*(settings.deposit_pct/100),stamp,stamp),
    d1.prepare("UPDATE company_settings SET next_estimate_number=next_estimate_number+1,updated_at=? WHERE company_id=?").bind(stamp,session.companyId),
    d1.prepare("INSERT INTO estimate_costs (id,company_id,estimate_id,material_cost,labor_cost,gate_cost,other_cost,total_cost,gross_profit,gross_margin,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)").bind(id("cost"),session.companyId,estimateId,materialCost,laborCost,gateCost,otherCost+addonCost,totalCost,grossProfit,grossMargin,stamp,stamp),
-   d1.prepare("INSERT INTO estimate_versions (id,company_id,estimate_id,version,approval_token,snapshot,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").bind(versionId,session.companyId,estimateId,1,token,JSON.stringify({companyId:session.companyId,estimateNumber:num,total,subtotal,deposit:total*(settings.deposit_pct/100),sections:calculatedSections.map(x=>({name:x.name,description:x.description,length:x.length,material:x.material.name,style:x.material.style,height:x.material.height,color:x.material.color})),gates:calcGates.map(x=>({description:x.gate.description,quantity:x.qty,price:x.gate.sell_price*x.qty})),addons:calcAddons.map(x=>({name:x.addon.name,quantity:x.qty,price:x.addon.customer_price*(x.addon.pricing_mode==="fixed"?1:x.qty)})),customerNotes:body.customerNotes??"",terms:settings.proposal_terms}),session.userId,stamp,stamp),
+   d1.prepare("INSERT INTO estimate_versions (id,company_id,estimate_id,version,approval_token,snapshot,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").bind(versionId,session.companyId,estimateId,1,token,JSON.stringify({companyId:session.companyId,estimateNumber:num,total,subtotal,deposit:total*(settings.deposit_pct/100),sections:calculatedSections.map(x=>({name:x.name,description:x.description,length:x.length,price:x.length*x.material.sell_price_per_foot,material:x.material.name,style:x.material.style,height:x.material.height,color:x.material.color})),gates:calcGates.map(x=>({description:x.gate.description,quantity:x.qty,price:x.gate.sell_price*x.qty})),addons:calcAddons.map(x=>({name:x.addon.name,quantity:x.qty,price:x.addon.customer_price*(x.addon.pricing_mode==="fixed"?1:x.qty)})),customerNotes:body.customerNotes??"",terms:settings.proposal_terms}),session.userId,stamp,stamp),
    d1.prepare("INSERT INTO activity_log (id,company_id,estimate_id,user_id,action,metadata,created_at) VALUES (?,?,?,?,?,?,?)").bind(id("act"),session.companyId,estimateId,session.userId,"estimate_created",JSON.stringify({number:num}),stamp)
   ];
   for(const x of calculatedSections)statements.push(d1.prepare("INSERT INTO estimate_sections (id,company_id,estimate_id,material_id,section_name,description,length_feet,style,height,color,sell_price,notes,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(id("sec"),session.companyId,estimateId,x.materialId,x.name,x.description,x.length,x.material.style,x.material.height,x.material.color,x.length*x.material.sell_price_per_foot,x.notes??"",stamp,stamp));

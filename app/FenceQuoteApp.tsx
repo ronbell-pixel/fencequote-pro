@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import YardMeasure from "./YardMeasure";
+import SignaturePad, { type SignatureValue } from "./SignaturePad";
 
 type Role = "owner" | "manager" | "salesperson";
 type View =
@@ -855,6 +856,8 @@ function Estimates({
       </section>
       {selected && (
         <EstimateDetail
+          ctx={ctx}
+          notify={notify}
           estimate={selected}
           canSeeCosts={canSeeCosts}
           onClose={() => setSelected(null)}
@@ -866,11 +869,15 @@ function Estimates({
 }
 
 function EstimateDetail({
+  ctx,
+  notify,
   estimate,
   canSeeCosts,
   onClose,
   onStatus,
 }: {
+  ctx: Ctx;
+  notify: (s: string) => void;
   estimate: any;
   canSeeCosts: boolean;
   onClose: () => void;
@@ -942,6 +949,14 @@ function EstimateDetail({
             </dl>
           </section>
         )}
+        <ESignPanel
+          ctx={ctx}
+          estimate={estimate}
+          notify={notify}
+          onSent={() =>
+            ["draft", "ready"].includes(estimate.status) && onStatus("sent")
+          }
+        />
         <section>
           <small>MOVE THROUGH PIPELINE</small>
           <div className="statusActions">
@@ -964,6 +979,121 @@ function EstimateDetail({
     </div>
   );
 }
+function ESignPanel({
+  ctx,
+  estimate,
+  notify,
+  onSent,
+}: {
+  ctx: Ctx;
+  estimate: any;
+  notify: (s: string) => void;
+  onSent: () => void;
+}) {
+  const [info, setInfo] = useState<any>(null),
+    [error, setError] = useState("");
+  useEffect(() => {
+    const q = new URLSearchParams({
+      estimateId: estimate.id,
+      company: ctx.company.id,
+      asRole: ctx.session.role,
+    });
+    fetch(`/api/estimates?${q}`, { cache: "no-store" })
+      .then(async (r) => {
+        const j = await r.json();
+        if (r.ok) setInfo(j);
+        else setError(j.error ?? "Unable to load signing link");
+      })
+      .catch(() => setError("Unable to load signing link"));
+  }, [estimate.id, estimate.status, ctx.company.id, ctx.session.role]);
+  const customer = ctx.customers.find((c) => c.id === estimate.customer_id);
+  const link = info ? `${window.location.origin}${info.signingPath}` : "";
+  const message = `Hi ${customer?.first_name ?? ""}, here is your fence proposal ${estimate.estimate_number} from ${ctx.company.name}. You can review and e-sign it here: ${link}`;
+  const sig = info?.signature;
+  const copy = async () => {
+    await navigator.clipboard.writeText(link);
+    notify("Signing link copied");
+    onSent();
+  };
+  return (
+    <section className="esignPanel">
+      <small>CUSTOMER E-SIGNATURE</small>
+      {error && <p className="pageError">{error}</p>}
+      {!info && !error && <p className="esignPanelMuted">Loading signing link…</p>}
+      {sig?.decision === "accepted" && (
+        <div className="esignPanelSigned">
+          <div className="esignPanelSig">
+            {sig.signature_image ? (
+              <img src={sig.signature_image} alt={`Signature of ${sig.customer_name}`} />
+            ) : (
+              <span>{sig.signature}</span>
+            )}
+          </div>
+          <p>
+            <b>✓ Signed by {sig.customer_name}</b>
+            {new Date(sig.accepted_at).toLocaleString()} ·{" "}
+            {sig.signature_method === "drawn" ? "drawn" : "typed"} signature
+            {sig.ip_address ? ` · IP ${sig.ip_address}` : ""}
+          </p>
+          <a className="quiet" href={info.signingPath} target="_blank" rel="noreferrer">
+            View signed proposal &amp; certificate ↗
+          </a>
+        </div>
+      )}
+      {sig?.decision === "declined" && (
+        <div className="esignPanelDeclined">
+          <b>Declined by {sig.customer_name}</b>
+          <span>{new Date(sig.accepted_at).toLocaleString()}</span>
+          {sig.decline_reason && <q>{sig.decline_reason}</q>}
+        </div>
+      )}
+      {info && !sig && (
+        <>
+          <p className="esignPanelMuted">
+            Send this secure link. Your customer reviews the proposal and signs
+            on any phone or computer — no account needed.
+          </p>
+          <div className="esignPanelLink">
+            <input readOnly value={link} aria-label="Customer signing link" onFocus={(e) => e.target.select()} />
+            <button className="primary" onClick={copy}>
+              Copy link
+            </button>
+          </div>
+          <div className="esignPanelActions">
+            <a
+              className="quiet"
+              href={`mailto:${customer?.email ?? ""}?subject=${encodeURIComponent(`Your fence proposal ${estimate.estimate_number}`)}&body=${encodeURIComponent(message)}`}
+              onClick={onSent}
+            >
+              ✉ Email
+            </a>
+            <a
+              className="quiet"
+              href={`sms:${customer?.mobile ?? ""}?&body=${encodeURIComponent(message)}`}
+              onClick={onSent}
+            >
+              ☏ Text
+            </a>
+            <a className="quiet" href={info.signingPath} target="_blank" rel="noreferrer">
+              Preview ↗
+            </a>
+          </div>
+        </>
+      )}
+      {!!info?.activity?.length && (
+        <ol className="esignPanelActivity">
+          {info.activity.slice(0, 5).map((a: any, i: number) => (
+            <li key={i}>
+              <span>{label(a.action)}</span>
+              <time>{new Date(a.created_at).toLocaleString()}</time>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 function Reports({ ctx, canSeeCosts }: { ctx: Ctx; canSeeCosts: boolean }) {
   if (!canSeeCosts)
     return (
@@ -2119,11 +2249,23 @@ function EstimateBuilder({
             body: JSON.stringify({
               token: result.approvalToken,
               customerName: name,
-              signature,
+              signerEmail: customerList.find((c) => c.id === customerId)
+                ?.email,
+              signatureMethod: signature.method,
+              signature:
+                signature.method === "typed" ? signature.text : undefined,
+              signatureImage:
+                signature.method === "drawn" ? signature.image : undefined,
               approved: true,
+              consent: true,
             }),
           });
           if (r.ok) setResult({ ...result, approved: true });
+          else
+            setResult({
+              ...result,
+              acceptError: (await r.json()).error ?? "Unable to record signature",
+            });
           setAccepting(false);
         }}
         accepting={accepting}
@@ -2824,7 +2966,7 @@ function Proposal({
   addons: string[];
   customer: any;
   notes: string;
-  onApprove: (n: string, s: string) => void;
+  onApprove: (n: string, s: NonNullable<SignatureValue>) => void;
   accepting: boolean;
   onDone: () => void;
 }) {
@@ -2832,7 +2974,8 @@ function Proposal({
     [name, setName] = useState(
       `${customer?.first_name ?? ""} ${customer?.last_name ?? ""}`,
     ),
-    [signature, setSignature] = useState("");
+    [consent, setConsent] = useState(false),
+    [signature, setSignature] = useState<SignatureValue>(null);
   return (
     <div className="modal proposalModal">
       <div className="proposalWrap">
@@ -2970,31 +3113,40 @@ function Proposal({
               />{" "}
               {ctx.company.approval_text}
             </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+              />{" "}
+              I agree to sign electronically. My electronic signature is legally
+              binding.
+            </label>
             <div className="approvalInputs">
               <label>
                 Customer name
                 <input value={name} onChange={(e) => setName(e.target.value)} />
               </label>
-              <label>
-                Electronic signature
-                <input
-                  value={signature}
-                  onChange={(e) => setSignature(e.target.value)}
-                  placeholder="Type full legal name"
-                />
-              </label>
             </div>
+            <SignaturePad name={name} onChange={setSignature} />
+            {result.acceptError && (
+              <p className="pageError">{result.acceptError}</p>
+            )}
             <button
               className="approve"
               disabled={
-                !approved || !name.trim() || !signature.trim() || accepting
+                !approved || !consent || !name.trim() || !signature || accepting
               }
-              onClick={() => onApprove(name, signature)}
+              onClick={() => signature && onApprove(name, signature)}
             >
               {accepting
-                ? "Recording approval…"
-                : `Accept proposal · ${money(result.total)}`}
+                ? "Recording signature…"
+                : `Accept & sign · ${money(result.total)}`}
             </button>
+            <p className="approvalRemote">
+              Customer not here? Close this proposal, open {result.estimateNumber}{" "}
+              under Estimates, and send them the e-signature link.
+            </p>
           </div>
           <footer>
             {ctx.company.name} · {ctx.company.address}, {ctx.company.city},{" "}
