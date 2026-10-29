@@ -10,11 +10,13 @@ export function EstimateBuilder({
   canSeeCosts,
   onClose,
   onSaved,
+  onPriceBook,
 }: {
   ctx: Ctx;
   canSeeCosts: boolean;
   onClose: () => void;
   onSaved: () => void;
+  onPriceBook: () => void;
 }) {
   const steps = ["Customer", "Fence", "Gates", "Extras", "Photos", "Review"],
     [step, setStep] = useState(0),
@@ -250,6 +252,31 @@ export function EstimateBuilder({
     ]);
     setSavedAt("Satellite measurement applied");
   };
+  if (!ctx.materials.length)
+    return (
+      <div className="modal">
+        <div className="approvalComplete">
+          <span className="warnIcon">
+            <Icon name="alert" size={28} />
+          </span>
+          <h2>Add your prices first</h2>
+          <p>
+            Estimates are priced from your price book, and it doesn’t have any
+            fence materials yet.
+          </p>
+          {ctx.session.canEditPricing ? (
+            <button className="primary" onClick={onPriceBook}>
+              Open price book
+            </button>
+          ) : (
+            <p>Ask your company owner to set up the price book.</p>
+          )}
+          <button className="quiet" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    );
   if (showNewCustomer)
     return (
       <NewCustomerForm

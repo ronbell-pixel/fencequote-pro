@@ -98,3 +98,31 @@ test("dashboard figures come from real estimate data", async () => {
   assert.match(builder, /useState\(0\)/);
   assert.match(builder, /per_unit/);
 });
+
+test("refuses price book changes without a Cloudflare Access token", async () => {
+  const { default: worker } = await import(new URL("../dist/server/index.js", import.meta.url).href);
+  const response = await worker.fetch(
+    new Request("https://app.example.com/api/pricebook", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kind: "materials", item: { name: "X", sellPrice: 1 } }),
+    }),
+    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
+    { waitUntil() {}, passThroughOnException() {} },
+  );
+  assert.equal(response.status, 401);
+});
+
+test("price book is editable only by owners or pricing admins and scoped to the company", async () => {
+  const [route, tenant, editor] = await Promise.all([
+    readFile(new URL("../app/api/pricebook/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/tenant.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/PriceBook.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(route, /canEditPricing/);
+  assert.match(route, /WHERE id=\? AND company_id=\? AND active=1/);
+  assert.match(route, /SET active=0/);
+  assert.doesNotMatch(route, /DELETE FROM/);
+  assert.match(tenant, /role!=="salesperson"/);
+  assert.match(editor, /postCost.*\/ 8/s);
+});

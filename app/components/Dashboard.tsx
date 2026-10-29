@@ -31,6 +31,7 @@ export function Dashboard({
   onNew,
   onOpen,
   onSetup,
+  onPriceBook,
 }: {
   ctx: Ctx;
   canSeeCosts: boolean;
@@ -38,6 +39,7 @@ export function Dashboard({
   onNew: () => void;
   onOpen: (status: string, query?: string) => void;
   onSetup: () => void;
+  onPriceBook: () => void;
 }) {
   const [period, setPeriod] = useState<Period>("month");
   const since = periodStart(period);
@@ -195,6 +197,18 @@ export function Dashboard({
             <h2>Up next</h2>
           </div>
           <div className="actionList">
+            {!ctx.materials.length && (
+              <button onClick={onPriceBook}>
+                <span className="actionIcon warn">
+                  <Icon name="alert" size={17} />
+                </span>
+                <span>
+                  <strong>Set up your price book</strong>
+                  <small>Add fence materials, gates and extras before quoting</small>
+                </span>
+                <em>Open</em>
+              </button>
+            )}
             {ctx.company.setup_step < 8 && (
               <button onClick={onSetup}>
                 <span className="actionIcon info">
@@ -222,7 +236,7 @@ export function Dashboard({
                 <em>{x.action}</em>
               </button>
             ))}
-            {!nextUp.length && ctx.company.setup_step >= 8 && (
+            {!nextUp.length && ctx.company.setup_step >= 8 && ctx.materials.length > 0 && (
               <div className="emptyState small">
                 <Icon name="check" />
                 <p>You’re all caught up.</p>

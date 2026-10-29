@@ -35,6 +35,7 @@ export default function FenceQuoteApp({ userName }: { userName: string }) {
   const [ctx, setCtx] = useState<Ctx | null>(null),
     [view, setView] = useState<View>("dashboard"),
     [filter, setFilter] = useState({ status: "all", query: "" }),
+    [adminTab, setAdminTab] = useState("Company Settings"),
     [search, setSearch] = useState(""),
     [builder, setBuilder] = useState(false),
     [onboarding, setOnboarding] = useState(false),
@@ -78,8 +79,13 @@ export default function FenceQuoteApp({ userName }: { userName: string }) {
     setToast(s);
     setTimeout(() => setToast(""), 2500);
   };
-  const go = (v: View, nextFilter?: { status?: string; query?: string }) => {
+  const go = (
+    v: View,
+    nextFilter?: { status?: string; query?: string },
+    tab = "Company Settings",
+  ) => {
     setView(v);
+    setAdminTab(tab);
     setMobile(false);
     setMenu("");
     if (nextFilter) setFilter({ status: "all", query: "", ...nextFilter });
@@ -232,7 +238,7 @@ export default function FenceQuoteApp({ userName }: { userName: string }) {
             <div>
               <strong>{ctx.company.name}</strong>
               <small>
-                {ctx.company.city}, {ctx.company.state}
+                {[ctx.company.city, ctx.company.state].filter(Boolean).join(", ")}
               </small>
             </div>
           </div>
@@ -340,6 +346,7 @@ export default function FenceQuoteApp({ userName }: { userName: string }) {
             onNew={() => setBuilder(true)}
             onOpen={(status, query) => go("estimates", { status, query })}
             onSetup={() => setOnboarding(true)}
+            onPriceBook={() => go("admin", undefined, "Price book")}
           />
         )}
         {view === "customers" && (
@@ -366,10 +373,13 @@ export default function FenceQuoteApp({ userName }: { userName: string }) {
         )}
         {view === "admin" && (
           <Admin
+            key={adminTab}
             ctx={ctx}
             canSeeCosts={canSeeCosts}
             onSetup={() => setOnboarding(true)}
             notify={notify}
+            reload={reload}
+            initialTab={adminTab}
           />
         )}
         {view === "platform" && ctx.session.platformRole && (
@@ -389,6 +399,10 @@ export default function FenceQuoteApp({ userName }: { userName: string }) {
           ctx={ctx}
           canSeeCosts={canSeeCosts}
           onClose={() => setBuilder(false)}
+          onPriceBook={() => {
+            setBuilder(false);
+            go("admin", undefined, "Price book");
+          }}
           onSaved={() => {
             setBuilder(false);
             reload();

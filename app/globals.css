@@ -3007,3 +3007,81 @@ td small {
     break-inside: avoid;
   }
 }
+
+/* ---------- Price book ---------- */
+.rowActions {
+  width: 88px;
+  text-align: right;
+  white-space: nowrap;
+}
+.marginOk {
+  color: var(--good);
+  font-weight: 600;
+}
+.marginBad {
+  color: var(--bad);
+  font-weight: 600;
+}
+.moneyInput {
+  position: relative;
+  display: block;
+}
+.moneyInput b {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 500;
+  color: var(--muted);
+  pointer-events: none;
+}
+.moneyInput input {
+  padding-left: 24px !important;
+}
+.sellField {
+  color: var(--ink);
+}
+.marginPreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  align-items: baseline;
+  margin: 0 24px 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+.marginPreview b {
+  color: var(--ink);
+  font-size: 15px;
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.marginPreview .marginBad b,
+.marginPreview .marginOk b {
+  color: inherit;
+}
+.marginPreview small {
+  flex-basis: 100%;
+  color: var(--bad);
+}
+.approvalComplete > .warnIcon {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.emptyConfig .quiet {
+  margin-top: 6px;
+}
+.adminLayout > *,
+.dashGrid > *,
+.page > * {
+  min-width: 0;
+}
+.formGrid label > span > i {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+}

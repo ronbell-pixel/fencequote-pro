@@ -1,19 +1,24 @@
 "use client";
 import { useState } from "react";
-import { Badge, Ctx, Icon, TenantLogo, label, money } from "./shared";
+import { PriceBook } from "./PriceBook";
+import { Badge, Ctx, Icon, TenantLogo, label } from "./shared";
 
 export function Admin({
   ctx,
   canSeeCosts,
   onSetup,
   notify,
+  reload,
+  initialTab = "Company Settings",
 }: {
   ctx: Ctx;
   canSeeCosts: boolean;
   onSetup: () => void;
   notify: (s: string) => void;
+  reload: () => void;
+  initialTab?: string;
 }) {
-  const [tab, setTab] = useState("Company Settings"),
+  const [tab, setTab] = useState(initialTab),
     [invite, setInvite] = useState({
       name: "",
       email: "",
@@ -52,7 +57,7 @@ export function Admin({
         <div className="adminNav">
           {[
             "Company Settings",
-            "Materials & Pricing",
+            "Price book",
             "Gates",
             "Add-ons",
             "Users",
@@ -115,56 +120,21 @@ export function Admin({
                 ))}
               </div>
             </>
-          ) : tab === "Materials & Pricing" ? (
-            <>
-              <div className="cardHead">
-                <div>
-                  <h2>Materials & pricing</h2>
-                  <p>Independent pricing for {ctx.company.name}.</p>
-                </div>
-              </div>
-              <div className="tableWrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Material / style</th>
-                      <th>Height</th>
-                      {canSeeCosts && (
-                        <>
-                          <th>Material cost</th>
-                          <th>Labor cost</th>
-                        </>
-                      )}
-                      <th>Sell / ft</th>
-                      <th>Min. sell</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ctx.materials.map((m) => (
-                      <tr key={m.id}>
-                        <td>
-                          <strong>{m.name}</strong>
-                          <small>
-                            {m.style} · {m.color}
-                          </small>
-                        </td>
-                        <td>{m.height}</td>
-                        {canSeeCosts && (
-                          <>
-                            <td>{money(m.material_cost_per_foot)}</td>
-                            <td>{money(m.labor_cost_per_foot)}</td>
-                          </>
-                        )}
-                        <td>
-                          <strong>{money(m.sell_price_per_foot)}</strong>
-                        </td>
-                        <td>{money(m.minimum_sell_price_per_foot)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+          ) : tab === "Price book" || tab === "Gates" || tab === "Add-ons" ? (
+            <PriceBook
+              key={tab}
+              ctx={ctx}
+              kind={
+                tab === "Gates"
+                  ? "gates"
+                  : tab === "Add-ons"
+                    ? "addons"
+                    : "materials"
+              }
+              canSeeCosts={canSeeCosts}
+              notify={notify}
+              reload={reload}
+            />
           ) : tab === "Users" ? (
             <>
               <div className="cardHead">

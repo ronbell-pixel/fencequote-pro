@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { getAccessUser, isLocalDev } from "./auth";
 
 export type AppRole = "owner" | "manager" | "salesperson";
-export type Session = { userId:string; oaiUserId:string; email:string; name:string; platformRole:"super_admin"|null; companyId:string; role:AppRole; supportMode:boolean };
+export type Session = { userId:string; oaiUserId:string; email:string; name:string; platformRole:"super_admin"|null; companyId:string; role:AppRole; supportMode:boolean; canEditPricing:boolean };
 const now = () => new Date().toISOString();
 const id = (prefix:string) => `${prefix}_${crypto.randomUUID().replaceAll("-","")}`;
 export const db = () => env.DB;
@@ -156,11 +156,11 @@ export async function requireSession(request:Request, requestedCompany?:string|n
   if(!companyId) throw Object.assign(new Error("No company membership"),{status:403});
   const company=await d1.prepare("SELECT status FROM companies WHERE id=?").bind(companyId).first<{status:string}>();
   if(!company) throw Object.assign(new Error("Company not found"),{status:404});
-  const membership=await d1.prepare("SELECT role,active FROM company_users WHERE company_id=? AND user_id=?").bind(companyId,user.id).first<any>();
+  const membership=await d1.prepare("SELECT role,active,pricing_admin FROM company_users WHERE company_id=? AND user_id=?").bind(companyId,user.id).first<any>();
   if(!platformRole && (!membership || !membership.active)) throw Object.assign(new Error("Tenant access denied"),{status:403});
   if(!platformRole && ["suspended","cancelled"].includes(company.status)) throw Object.assign(new Error(`Company access is ${company.status}`),{status:423});
   const baseRole=(membership?.role ?? "owner") as AppRole; const role=(platformRole&&["owner","manager","salesperson"].includes(requestedRole??"")?requestedRole:baseRole) as AppRole;
-  return {userId:user.id,oaiUserId:user.oai_user_id,email:user.email,name:user.name,platformRole,companyId,role,supportMode:Boolean(platformRole&&requestedCompany)};
+  return {userId:user.id,oaiUserId:user.oai_user_id,email:user.email,name:user.name,platformRole,companyId,role,supportMode:Boolean(platformRole&&requestedCompany),canEditPricing:role==="owner"||(Boolean(membership?.pricing_admin)&&role===baseRole&&role!=="salesperson")};
 }
 
 export async function getContext(request:Request) {

@@ -16,6 +16,7 @@ export type Ctx = {
     platformRole: "super_admin" | null;
     companyId: string;
     supportMode: boolean;
+    canEditPricing: boolean;
   };
   company: any;
   companies: any[];

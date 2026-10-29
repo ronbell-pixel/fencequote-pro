@@ -280,7 +280,8 @@ export function Onboarding({
                       : step === 5
                         ? `${ctx.addons.length} add-ons`
                         : "Invite your company team"}{" "}
-                  already configured for this tenant.
+                  in your price book. Add or change them in Settings → Price
+                  book at any time.
                 </p>
               </div>
             )}
