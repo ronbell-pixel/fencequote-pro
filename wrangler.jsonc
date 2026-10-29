@@ -1,5 +1,6 @@
 // Cloudflare Worker configuration for FenceQuote Pro.
 // Replace every REPLACE_ME value before deploying — see DEPLOY.md.
+// Secret (not stored here): SUPER_ADMIN_EMAILS — set with `npx wrangler secret put SUPER_ADMIN_EMAILS`.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "fencequote-pro",
@@ -12,12 +13,17 @@
 
   "observability": { "enabled": true },
 
+  // Served at the custom domain; Cloudflare creates the DNS record and certificate on deploy.
+  "routes": [{ "pattern": "fencepro.nextwin-os.com", "custom_domain": true }],
+  // The app refuses requests without an Access token anyway; this keeps the only entrance behind Access.
+  "workers_dev": false,
+
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "fencequote-db",
       // Printed by: npx wrangler d1 create fencequote-db
-      "database_id": "00000000-0000-4000-8000-000000000000"
+      "database_id": "55bd1e8e-94c8-4301-be9c-681655b958ff"
     }
   ],
 
@@ -34,9 +40,6 @@
     // and the Access application's Overview tab shows its Application Audience (AUD) tag.
     "CF_ACCESS_TEAM_DOMAIN": "REPLACE_ME.cloudflareaccess.com",
     "CF_ACCESS_AUD": "REPLACE_ME",
-
-    // Comma-separated emails that get platform-admin rights on sign-in.
-    "SUPER_ADMIN_EMAILS": "REPLACE_ME@yourcompany.com",
 
     // Name of the first company created when a platform admin signs in to an empty database.
     "BOOTSTRAP_COMPANY_NAME": "My Fence Company",

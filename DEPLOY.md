@@ -32,12 +32,17 @@ The app creates its tables on first use. You do not need to run migrations on a 
 
 | Setting | What to put |
 | --- | --- |
-| `SUPER_ADMIN_EMAILS` | Your email (comma-separate several). These people get platform-admin rights. |
 | `BOOTSTRAP_COMPANY_NAME` | Your company name. It's created the first time a platform admin signs in to an empty database. |
 | `SEED_DEMO_DATA` | Leave `"false"`. `"true"` fills an empty database with demo companies. |
 | `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD` | Filled in at step 5. |
 
-## 4. First deploy and custom domain
+## 4. Admin email, first deploy and custom domain
+
+Set your admin email(s) as a secret so they never sit in the repository (comma-separate several):
+
+```bash
+npx wrangler secret put SUPER_ADMIN_EMAILS
+```
 
 ```bash
 npm run deploy
