@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
+async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
   return worker.fetch(
-    new Request("http://localhost/", { headers: { accept: "text/html" } }),
+    new Request(`https://app.example.com${path}`, { headers: { accept: "text/html" } }),
     {
       ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
     },
@@ -22,9 +22,16 @@ test("server-renders the FenceQuote Pro application shell", async () => {
   const html = await response.text();
   assert.match(html, /FenceQuote Pro/);
   assert.match(html, /Measure the yard/);
-  assert.match(html, /Sign in with ChatGPT/);
-  assert.match(html, /same email address your company owner invited/i);
+  assert.match(html, /Sign in/);
+  assert.match(html, /Cloudflare Access/);
+  assert.doesNotMatch(html, /ChatGPT/);
   assert.doesNotMatch(html, /Authentication required|Workspace unavailable/);
+});
+
+test("refuses workspace data without a Cloudflare Access token", async () => {
+  const response = await render("/api/context");
+  assert.equal(response.status, 401);
+  assert.doesNotMatch(await response.text(), /co_demo|Evelyn/);
 });
 
 test("keeps satellite yard measurement and geocoding wired into estimates", async () => {
@@ -40,7 +47,7 @@ test("keeps satellite yard measurement and geocoding wired into estimates", asyn
   assert.match(measure, /final footage onsite/i);
   assert.doesNotMatch(measure, /L\.polygon/);
   assert.match(geocode, /geocoding\.geo\.census\.gov/);
-  assert.match(page, /chatGPTSignInPath/);
+  assert.match(page, /getAccessUser/);
 });
 
 test("keeps customer and estimate operations wired into the product", async () => {

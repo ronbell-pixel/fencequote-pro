@@ -1,0 +1,5 @@
+# Copy to .dev.vars for local development overrides (never commit .dev.vars).
+# Local `npm run dev` on localhost signs you in as a demo admin and seeds demo data automatically.
+# To test the real Cloudflare Access check locally, use a non-localhost host and set:
+# CF_ACCESS_TEAM_DOMAIN=yourteam.cloudflareaccess.com
+# CF_ACCESS_AUD=your-application-aud-tag

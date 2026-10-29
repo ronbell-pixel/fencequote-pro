@@ -1,23 +1,15 @@
-import { chatGPTSignInPath, getChatGPTUser } from "./chatgpt-auth";
-import FenceQuoteApp from "./FenceQuoteApp";
 import { headers } from "next/headers";
+import { getAccessUser } from "../lib/auth";
+import FenceQuoteApp from "./FenceQuoteApp";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const requestHeaders = await headers();
-  const host = (requestHeaders.get("host") ?? "").split(":")[0];
-  const user =
-    (await getChatGPTUser()) ??
-    (process.env.NODE_ENV === "development" &&
-    ["localhost", "127.0.0.1", "::1", "[::1]"].includes(host)
-      ? {
-          userId: "local-super-admin",
-          email: "admin@fencequote.local",
-          displayName: "Jordan Ellis",
-          fullName: "Jordan Ellis",
-        }
-      : null);
+  const user = await getAccessUser(
+    requestHeaders,
+    requestHeaders.get("host") ?? "",
+  );
   if (!user)
     return (
       <main className="signInPage">
@@ -41,14 +33,13 @@ export default async function Home() {
             <span>See your margin on every quote as you build it</span>
             <span>Send branded proposals customers can e-sign</span>
           </div>
-          <a
-            className="signInButton"
-            href={chatGPTSignInPath("/")}
-            target="_top"
-          >
-            Sign in with ChatGPT
+          <a className="signInButton" href="/" target="_top">
+            Sign in
           </a>
-          <small>Use the same email address your company owner invited.</small>
+          <small>
+            Use the email address your company owner added. If this page keeps
+            coming back, Cloudflare Access isn’t set up for this site yet.
+          </small>
         </section>
         <aside className="signInVisual">
           <div className="aerialCard">
@@ -62,5 +53,5 @@ export default async function Home() {
         </aside>
       </main>
     );
-  return <FenceQuoteApp userName={user.displayName} />;
+  return <FenceQuoteApp userName={user.name} />;
 }

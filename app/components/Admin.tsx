@@ -223,8 +223,9 @@ export function Admin({
                   <div>
                     <strong>Access is ready for {inviteReady}</strong>
                     <p>
-                      Share this site address with them. They must choose “Sign
-                      in with ChatGPT” using that exact email address.
+                      Also add this email to the Cloudflare Access policy for
+                      this site. Then send them the site address: they sign in
+                      with that email and Cloudflare emails them a one-time code.
                     </p>
                   </div>
                   <button

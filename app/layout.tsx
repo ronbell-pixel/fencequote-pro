@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 
 const inter = Inter({ variable: "--font-sans", subsets: ["latin"] });
 
-const image = "https://fencequote-pro-v1.rb-mo.chatgpt.site/og.png";
+const image = "/og.png";
 export const metadata: Metadata = {
   title: "FenceQuote Pro",
   description:

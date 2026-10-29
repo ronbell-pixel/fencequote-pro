@@ -110,6 +110,7 @@ export default function FenceQuoteApp({ userName }: { userName: string }) {
     load(companyId, ctx.session.role);
   const switchRole = (role: string) => load(ctx.session.companyId, role);
   const customerActivity = ctx.activity.filter((a) => ACTIVITY_TEXT[a.action]);
+  const displayName = ctx.session.name || userName;
   return (
     <div
       className="shell"
@@ -174,9 +175,9 @@ export default function FenceQuoteApp({ userName }: { userName: string }) {
               aria-expanded={menu === "profile"}
               onClick={() => setMenu(menu === "profile" ? "" : "profile")}
             >
-              <span className="avatar">{initials(userName)}</span>
+              <span className="avatar">{initials(displayName)}</span>
               <span>
-                <strong>{userName}</strong>
+                <strong>{displayName}</strong>
                 <small>
                   {ctx.session.platformRole ? "Super admin · " : ""}
                   {label(ctx.session.role)}
@@ -192,7 +193,7 @@ export default function FenceQuoteApp({ userName }: { userName: string }) {
                 </button>
                 <a
                   role="menuitem"
-                  href="/signout-with-chatgpt?return_to=%2F"
+                  href="/cdn-cgi/access/logout"
                   target="_top"
                 >
                   <Icon name="logout" />
@@ -335,7 +336,7 @@ export default function FenceQuoteApp({ userName }: { userName: string }) {
           <Dashboard
             ctx={ctx}
             canSeeCosts={canSeeCosts}
-            userName={userName}
+            userName={displayName}
             onNew={() => setBuilder(true)}
             onOpen={(status, query) => go("estimates", { status, query })}
             onSetup={() => setOnboarding(true)}

@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { getChatGPTUser } from "../app/chatgpt-auth";
+import { getAccessUser, isLocalDev } from "./auth";
 
 export type AppRole = "owner" | "manager" | "salesperson";
 export type Session = { userId:string; oaiUserId:string; email:string; name:string; platformRole:"super_admin"|null; companyId:string; role:AppRole; supportMode:boolean };
@@ -7,7 +7,14 @@ const now = () => new Date().toISOString();
 const id = (prefix:string) => `${prefix}_${crypto.randomUUID().replaceAll("-","")}`;
 export const db = () => env.DB;
 
-async function ensureRuntimeSchema(){
+let schemaReady:Promise<void>|null=null;
+/** Creates any missing tables. Runs once per Worker isolate. */
+function ensureRuntimeSchema(){
+  schemaReady??=createRuntimeSchema().catch(error=>{schemaReady=null;throw error;});
+  return schemaReady;
+}
+
+async function createRuntimeSchema(){
   const d1=db(); const sql=[
     "CREATE TABLE IF NOT EXISTS companies (id TEXT PRIMARY KEY NOT NULL,name TEXT NOT NULL,legal_name TEXT,slug TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'trial',setup_step INTEGER NOT NULL DEFAULT 1,settings TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS company_settings (company_id TEXT PRIMARY KEY NOT NULL,address TEXT,city TEXT,state TEXT,zip TEXT,phone TEXT,email TEXT,website TEXT,primary_contact TEXT,timezone TEXT,logo_key TEXT,primary_color TEXT NOT NULL DEFAULT '#123447',secondary_color TEXT NOT NULL DEFAULT '#2f7d62',accent_color TEXT NOT NULL DEFAULT '#c8ef5a',sales_tax REAL NOT NULL DEFAULT 0,deposit_pct REAL NOT NULL DEFAULT 30,quote_expiration_days INTEGER NOT NULL DEFAULT 30,estimate_prefix TEXT NOT NULL DEFAULT 'FQP',next_estimate_number INTEGER NOT NULL DEFAULT 10001,min_gross_margin REAL NOT NULL DEFAULT 30,max_sales_discount REAL NOT NULL DEFAULT 5,proposal_terms TEXT,proposal_footer TEXT,approval_text TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)",
@@ -36,15 +43,19 @@ async function ensureRuntimeSchema(){
 }
 
 async function identity(request:Request) {
-  const user = await getChatGPTUser();
-  if (user) return { oaiUserId:user.userId, email:user.email.toLowerCase(), name:user.displayName };
-  const host = new URL(request.url).hostname;
-  if (["localhost","127.0.0.1","::1","[::1]"].includes(host)) return { oaiUserId:"local-super-admin", email:"admin@fencequote.local", name:"Jordan Ellis" };
-  return null;
+  const user=await getAccessUser(request.headers,new URL(request.url).host);
+  return user?{oaiUserId:user.id,email:user.email,name:user.name}:null;
 }
 
-async function seedPlatform(user:{oaiUserId:string;email:string;name:string}) {
-  const d1=db(); const stamp=now(); await ensureRuntimeSchema();
+type WorkerVars={SEED_DEMO_DATA?:string;SUPER_ADMIN_EMAILS?:string;BOOTSTRAP_COMPANY_NAME?:string};
+const vars=()=>env as unknown as WorkerVars;
+/** Platform administrators are named by email in the SUPER_ADMIN_EMAILS variable (comma separated). */
+const isSuperAdminEmail=(email:string)=>(vars().SUPER_ADMIN_EMAILS??"").split(",").map(e=>e.trim().toLowerCase()).filter(Boolean).includes(email.toLowerCase());
+/** Demo companies are only created for local development or when SEED_DEMO_DATA is "true". */
+const shouldSeedDemo=(request:Request)=>vars().SEED_DEMO_DATA==="true"||isLocalDev(new URL(request.url).host);
+
+async function seedDemoData(user:{oaiUserId:string;email:string;name:string}) {
+  const d1=db(); const stamp=now();
   const count=await d1.prepare("SELECT COUNT(*) AS n FROM companies").first<{n:number}>();
   if ((count?.n ?? 0) === 0) {
     const uid=id("usr");
@@ -84,22 +95,64 @@ async function seedPlatform(user:{oaiUserId:string;email:string;name:string}) {
     }
     await d1.batch(statements);
     await d1.prepare("PRAGMA optimize").run();
-  } else {
-    const existing=await d1.prepare("SELECT id FROM users WHERE oai_user_id=? OR lower(email)=?").bind(user.oaiUserId,user.email).first<{id:string}>();
-    if(!existing){const uid=id("usr");await d1.prepare("INSERT INTO users (id,oai_user_id,email,name,platform_role,created_at,updated_at) VALUES (?,?,?,?,NULL,?,?)").bind(uid,user.oaiUserId,user.email,user.name,now(),now()).run();}
   }
+}
+
+/** Creates an empty company workspace owned by `ownerUserId`. */
+export async function createCompany(name:string,ownerUserId:string,opts:{legalName?:string;city?:string;state?:string;timezone?:string;prefix?:string}={}){
+  const d1=db(),companyId=id("co"),stamp=now(),slug=name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")+"-"+companyId.slice(-5);
+  await d1.batch([
+    d1.prepare("INSERT INTO companies (id,name,legal_name,slug,status,setup_step,settings,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").bind(companyId,name,opts.legalName??name,slug,"trial",1,"{}",stamp,stamp),
+    d1.prepare("INSERT INTO company_settings (company_id,city,state,timezone,primary_color,secondary_color,accent_color,sales_tax,deposit_pct,quote_expiration_days,estimate_prefix,next_estimate_number,min_gross_margin,max_sales_discount,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(companyId,opts.city??"",opts.state??"",opts.timezone??"America/Chicago","#123447","#2f7d62","#c8ef5a",0,30,30,String(opts.prefix??"FQP").toUpperCase(),10001,30,5,stamp,stamp),
+    d1.prepare("INSERT INTO company_users (company_id,user_id,role,pricing_admin,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?)").bind(companyId,ownerUserId,"owner",1,1,stamp,stamp),
+  ]);
+  return companyId;
+}
+
+/**
+ * Finds the signed-in person's user record. Only invited people (added by a company
+ * owner) and SUPER_ADMIN_EMAILS can get in; anyone else who passes Cloudflare Access
+ * is refused here.
+ */
+async function resolveUser(request:Request,who:{oaiUserId:string;email:string;name:string}){
+  await ensureRuntimeSchema(); const d1=db();
+  if(shouldSeedDemo(request)){
+    const count=await d1.prepare("SELECT COUNT(*) AS n FROM companies").first<{n:number}>();
+    if((count?.n??0)===0) await seedDemoData(who);
+  }
+  let user=await d1.prepare("SELECT id,oai_user_id,email,name,platform_role FROM users WHERE oai_user_id=? OR lower(email)=?").bind(who.oaiUserId,who.email).first<any>();
+  const superAdmin=isSuperAdminEmail(who.email);
+  if(!user){
+    if(!superAdmin) throw Object.assign(new Error(`${who.email} hasn’t been added to a company yet. Ask your company owner to add this email in Settings → Users.`),{status:403});
+    const uid=id("usr"),stamp=now();
+    await d1.prepare("INSERT INTO users (id,oai_user_id,email,name,platform_role,created_at,updated_at) VALUES (?,?,?,?,?,?,?)").bind(uid,who.oaiUserId,who.email,who.name,"super_admin",stamp,stamp).run();
+    user={id:uid,oai_user_id:who.oaiUserId,email:who.email,name:who.name,platform_role:"super_admin"};
+  }
+  if(user.oai_user_id!==who.oaiUserId){
+    // First sign-in after an invite, or after moving from the old host: link this login to the record.
+    const name=String(user.oai_user_id).startsWith("invite:")?user.name||who.name:user.name;
+    await d1.prepare("UPDATE users SET oai_user_id=?,name=?,updated_at=? WHERE id=?").bind(who.oaiUserId,name,now(),user.id).run();
+    user={...user,oai_user_id:who.oaiUserId,name};
+  }
+  if(superAdmin&&user.platform_role!=="super_admin"){
+    await d1.prepare("UPDATE users SET platform_role='super_admin',updated_at=? WHERE id=?").bind(now(),user.id).run();
+    user={...user,platform_role:"super_admin"};
+  }
+  return user;
 }
 
 export async function requireSession(request:Request, requestedCompany?:string|null, requestedRole?:string|null):Promise<Session> {
   const who=await identity(request); if(!who) throw Object.assign(new Error("Authentication required"),{status:401});
-  await seedPlatform(who); const d1=db();
-  let user=await d1.prepare("SELECT id,oai_user_id,email,name,platform_role FROM users WHERE oai_user_id=? OR lower(email)=?").bind(who.oaiUserId,who.email).first<any>();
-  if(!user) throw Object.assign(new Error("User account unavailable"),{status:403});
-  if(user.oai_user_id.startsWith("invite:")){await d1.prepare("UPDATE users SET oai_user_id=?,name=?,updated_at=? WHERE id=?").bind(who.oaiUserId,who.name,now(),user.id).run();user={...user,oai_user_id:who.oaiUserId,name:who.name};}
-  const requestUrl=new URL(request.url),localTestIdentity=["localhost","127.0.0.1","::1","[::1]"].includes(requestUrl.hostname)&&requestUrl.searchParams.get("testNonAdmin")==="1";
+  const user=await resolveUser(request,who); const d1=db();
+  const requestUrl=new URL(request.url),localTestIdentity=isLocalDev(requestUrl.host)&&requestUrl.searchParams.get("testNonAdmin")==="1";
   const platformRole=(localTestIdentity?null:user.platform_role) as "super_admin"|null;
   let companyId=requestedCompany;
-  if(!companyId){const first=await d1.prepare("SELECT company_id FROM company_users WHERE user_id=? AND active=1 ORDER BY created_at LIMIT 1").bind(user.id).first<{company_id:string}>();companyId=first?.company_id ?? (platformRole?"co_demo":null);}
+  if(!companyId){const first=await d1.prepare("SELECT company_id FROM company_users WHERE user_id=? AND active=1 ORDER BY created_at LIMIT 1").bind(user.id).first<{company_id:string}>();companyId=first?.company_id ?? null;
+    if(!companyId&&platformRole){
+      // A platform admin with no membership opens the first company, creating one on a brand-new database.
+      const any=await d1.prepare("SELECT id FROM companies ORDER BY created_at LIMIT 1").first<{id:string}>();
+      companyId=any?.id ?? await createCompany(vars().BOOTSTRAP_COMPANY_NAME||"My Fence Company",user.id);
+    }}
   if(!companyId) throw Object.assign(new Error("No company membership"),{status:403});
   const company=await d1.prepare("SELECT status FROM companies WHERE id=?").bind(companyId).first<{status:string}>();
   if(!company) throw Object.assign(new Error("Company not found"),{status:404});
