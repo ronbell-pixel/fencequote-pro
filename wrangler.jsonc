@@ -38,7 +38,7 @@
   "vars": {
     // Cloudflare Access: Zero Trust → Settings → Custom pages shows your team domain,
     // and the Access application's Overview tab shows its Application Audience (AUD) tag.
-    "CF_ACCESS_TEAM_DOMAIN": "REPLACE_ME.cloudflareaccess.com",
+    "CF_ACCESS_TEAM_DOMAIN": "more-ron.cloudflareaccess.com",
     "CF_ACCESS_AUD": "REPLACE_ME",
 
     // Name of the first company created when a platform admin signs in to an empty database.
