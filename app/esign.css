@@ -1,5 +1,5 @@
 /* Customer-facing proposal + e-signature page (/p/[token]) and the shared signature pad. */
-.esign{--brand:#123447;--brand-2:#2f7d62;--brand-accent:#c8ef5a;--e-ink:#0f1c24;--e-muted:#5f6f78;--e-line:#e3e8eb;--e-bg:#f5f7f8;min-height:100vh;background:var(--e-bg);color:var(--e-ink);font-family:var(--font-geist-sans),ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:48px}
+.esign{--brand:#123447;--brand-2:#2f7d62;--brand-accent:#c8ef5a;--e-ink:#0f1c24;--e-muted:#5f6f78;--e-line:#e3e8eb;--e-bg:#f5f7f8;min-height:100vh;background:var(--e-bg);color:var(--e-ink);font-family:var(--font-sans),ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:48px}
 .esignTop{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px max(16px,calc((100vw - 1120px)/2));background:rgba(255,255,255,.86);backdrop-filter:saturate(1.4) blur(12px);border-bottom:1px solid var(--e-line)}
 .esignBrand{display:flex;align-items:center;gap:12px;min-width:0}
 .esignBrand img{height:40px;max-width:140px;object-fit:contain}
@@ -64,11 +64,11 @@
 .esignCert dl div{display:grid;grid-template-columns:150px 1fr;gap:12px;font-size:13.5px}
 .esignCert dt{color:var(--e-muted)}
 .esignCert dd{margin:0;word-break:break-word}
-.esignCert .mono{font-family:var(--font-geist-mono),ui-monospace,monospace;font-size:12px}
+.esignCert .mono{font-family:ui-monospace,monospace;font-size:12px}
 .esignSigImage{border:1px dashed #cfd8dc;border-radius:12px;padding:12px;display:flex;align-items:center;min-height:96px;background:#fbfcfc}
 .esignSigImage img{max-height:90px;max-width:100%}
 .esignScript,.sigTyped b{font-family:"Brush Script MT","Segoe Script","Snell Roundhand",cursive;font-size:34px;font-weight:400;color:#14213d}
-.esignMissing{max-width:520px;margin:15vh auto;padding:0 20px;text-align:center;font-family:var(--font-geist-sans),system-ui,sans-serif}
+.esignMissing{max-width:520px;margin:15vh auto;padding:0 20px;text-align:center;font-family:var(--font-sans),system-ui,sans-serif}
 .esignMissing h1{font-size:24px}
 .esignMissing p{color:#5f6f78;line-height:1.6}
 
@@ -127,3 +127,10 @@
 .esignPanelActivity li{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted)}
 .esignPanelActivity span{color:var(--ink)}
 .approvalRemote{font-size:12.5px;color:var(--muted);margin:12px 0 0}.approval .sigPad{margin:14px 0}
+
+/* Keep the signing page independent of the staff app's global label/heading styles */
+.esign label{font-weight:400;color:inherit}
+.esign .esignCheck{flex-direction:row;font-size:13.5px;color:#33434c}
+.esign .esignField,.esign .sigTyped{gap:6px}
+.esignCard h2,.esignSign h2,.esignMissing h1,.esignHero h1{font-weight:650}
+.esignHero h1{font-weight:700}

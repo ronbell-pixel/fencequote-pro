@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "./components/shared";
 
 type Point = [number, number];
 type Props = {
@@ -135,19 +136,23 @@ export default function YardMeasure({ initialAddress, onApply }: Props) {
         type="button"
         onClick={() => setOpen(true)}
       >
-        <span>◎</span>
+        <span>
+          <Icon name="pin" size={20} />
+        </span>
         <div>
           <strong>Measure the backyard fence run</strong>
           <small>Trace from one back house corner to the other</small>
         </div>
-        <b>Open yard map →</b>
+        <b>Open yard map</b>
       </button>
     );
   return (
     <section className="yardMeasure">
       <div className="yardMeasureHead">
         <div>
-          <span>◎</span>
+          <span>
+          <Icon name="pin" size={20} />
+        </span>
           <div>
             <strong>Backyard fence measure</strong>
             <small>

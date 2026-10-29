@@ -37,16 +37,16 @@ export default async function Home() {
             <em>Win the job.</em>
           </h1>
           <div className="signInBenefits">
-            <span>✓ Satellite yard measurement</span>
-            <span>✓ Live margin protection</span>
-            <span>✓ Branded proposals & approvals</span>
+            <span>Measure fence runs from satellite imagery</span>
+            <span>See your margin on every quote as you build it</span>
+            <span>Send branded proposals customers can e-sign</span>
           </div>
           <a
             className="signInButton"
             href={chatGPTSignInPath("/")}
             target="_top"
           >
-            Sign in with ChatGPT →
+            Sign in with ChatGPT
           </a>
           <small>Use the same email address your company owner invited.</small>
         </section>
@@ -54,7 +54,7 @@ export default async function Home() {
           <div className="aerialCard">
             <div className="aerialGrid" />
             <div className="aerialQuote">
-              <span>SATELLITE YARD QUOTING</span>
+              <span>Satellite yard quoting</span>
               <strong>Trace. Measure. Price.</strong>
               <small>USGS aerial imagery · field verification built in</small>
             </div>

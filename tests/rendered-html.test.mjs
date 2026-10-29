@@ -45,12 +45,16 @@ test("keeps satellite yard measurement and geocoding wired into estimates", asyn
 
 test("keeps customer and estimate operations wired into the product", async () => {
   const [app, estimatesRoute] = await Promise.all([
-    readFile(new URL("../app/FenceQuoteApp.tsx", import.meta.url), "utf8"),
+    Promise.all(
+      ["Customers", "Estimates"].map((f) =>
+        readFile(new URL(`../app/components/${f}.tsx`, import.meta.url), "utf8"),
+      ),
+    ).then((files) => files.join("\n")),
     readFile(new URL("../app/api/estimates/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(app, /Add customer/);
   assert.match(app, /Export CSV/);
-  assert.match(app, /MOVE THROUGH PIPELINE/);
+  assert.match(app, /Move through pipeline/);
   assert.match(estimatesRoute, /export async function PATCH/);
   assert.match(estimatesRoute, /estimate_status_changed/);
 });
@@ -62,7 +66,7 @@ test("keeps customer e-signature wired end to end", async () => {
     readFile(new URL("../app/SignaturePad.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/acceptance/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/esign.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/FenceQuoteApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/Estimates.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /recordView/);
   assert.match(signer, /Accept & sign/);
@@ -72,5 +76,18 @@ test("keeps customer e-signature wired end to end", async () => {
   assert.match(acceptance, /expired/);
   assert.match(acceptance, /cf-connecting-ip/);
   assert.match(esign, /SHA-256/);
-  assert.match(app, /CUSTOMER E-SIGNATURE/);
+  assert.match(app, /Customer e-signature/);
+});
+
+test("dashboard figures come from real estimate data", async () => {
+  const [dashboard, reports, builder] = await Promise.all(
+    ["Dashboard", "Reports", "EstimateBuilder"].map((f) =>
+      readFile(new URL(`../app/components/${f}.tsx`, import.meta.url), "utf8"),
+    ),
+  );
+  assert.doesNotMatch(dashboard, /width: "\d+%"/);
+  assert.match(dashboard, /periodStart/);
+  assert.doesNotMatch(reports, /35 \+ i \* 12/);
+  assert.match(builder, /useState\(0\)/);
+  assert.match(builder, /per_unit/);
 });
