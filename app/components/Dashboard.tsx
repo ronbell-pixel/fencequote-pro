@@ -93,12 +93,18 @@ export function Dashboard({
       })),
   ];
   const firstName = (ctx.session.name || userName).split(" ")[0];
+  const viewedCount = ctx.estimates.filter((e) => e.status === "viewed").length;
+  const heroSummary = viewedCount
+    ? `${viewedCount} customer${viewedCount === 1 ? " is" : "s are"} looking at a proposal right now — ${waiting.length} quote${waiting.length === 1 ? "" : "s"} awaiting a decision.`
+    : waiting.length
+      ? `${waiting.length} quote${waiting.length === 1 ? " is" : "s are"} out with customers awaiting a decision.`
+      : "Measure a yard, price the fence, and send a proposal your customer can sign from their phone.";
 
   return (
     <section className="page">
-      <div className="pageHead">
-        <div>
-          <p className="eyebrow">
+      <div className="hero">
+        <div className="heroText">
+          <p className="heroDate">
             {new Date().toLocaleDateString("en-US", {
               weekday: "long",
               month: "long",
@@ -108,26 +114,48 @@ export function Dashboard({
           <h1>
             {greeting()}, {firstName}
           </h1>
-        </div>
-        <div className="segmented" role="group" aria-label="Time period">
-          {PERIODS.map(([key, name]) => (
-            <button
-              key={key}
-              aria-pressed={period === key}
-              className={period === key ? "active" : ""}
-              onClick={() => setPeriod(key)}
-            >
-              {name}
+          <p className="heroSummary">{heroSummary}</p>
+          <div className="heroActions">
+            <button className="heroPrimary" onClick={onNew}>
+              <Icon name="plus" size={18} /> New estimate
             </button>
-          ))}
+            <button className="heroSecondary" onClick={() => onOpen("all")}>
+              View all estimates
+            </button>
+          </div>
+        </div>
+        <div className="heroSide">
+          <div className="heroStat">
+            <span>Open pipeline</span>
+            <strong>{money(sum(open))}</strong>
+            <small>
+              {open.length} quote{open.length === 1 ? "" : "s"} in progress
+            </small>
+          </div>
+          <div
+            className="segmented onDark"
+            role="group"
+            aria-label="Time period"
+          >
+            {PERIODS.map(([key, name]) => (
+              <button
+                key={key}
+                aria-pressed={period === key}
+                className={period === key ? "active" : ""}
+                onClick={() => setPeriod(key)}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       <div className="metrics">
         <Metric
-          label="Open pipeline"
-          value={money(sum(open))}
-          sub={`${open.length} quote${open.length === 1 ? "" : "s"} · ${waiting.length} awaiting customer`}
+          label="Quotes created"
+          value={String(rows.length)}
+          sub={`${waiting.length} awaiting a customer decision`}
         />
         <Metric
           label="Signed"
