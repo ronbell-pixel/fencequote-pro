@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>FenceQuote Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  @page { size: Letter; margin: 0; }
+  :root {
+    --ink: #0e1a20; --ink-2: #3d4c54; --muted: #5b6b73; --line: #e6eaec;
+    --brand: #123447; --accent: #c8ef5a; --bg: #f7f8f7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 8.5in; height: 11in; }
+  body { font-family: Inter, system-ui, sans-serif; color: var(--ink); background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 8.5in; height: 11in; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Hero */
+  .hero {
+    position: relative; color: #fff; padding: 0.45in 0.55in 0;
+    background:
+      radial-gradient(circle at 92% 8%, rgba(200,239,90,.28), transparent 32%),
+      radial-gradient(circle at 8% 100%, rgba(42,120,214,.35), transparent 40%),
+      linear-gradient(135deg, #0b2635, #123447 55%, #1a4a5e);
+    height: 4.55in; overflow: hidden;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+  .brand i { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: var(--brand); display: grid; place-items: center; font-style: normal; font-weight: 800; font-size: 12px; }
+  .brand span { color: rgba(255,255,255,.6); font-weight: 500; }
+  .heroGrid { display: grid; grid-template-columns: 3.4in 1fr; gap: 0.3in; margin-top: 0.32in; }
+  .eyebrow { color: var(--accent); font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  h1 { font-size: 32px; line-height: 1.06; letter-spacing: -0.03em; font-weight: 800; margin-top: 10px; }
+  h1 em { font-style: normal; color: var(--accent); }
+  .lede { font-size: 12.5px; line-height: 1.55; color: rgba(255,255,255,.82); margin-top: 12px; }
+  .stats { display: flex; gap: 14px; white-space: nowrap; margin-top: 18px; }
+  .stats div { border-left: 2px solid var(--accent); padding-left: 9px; }
+  .stats b { display: block; font-size: 17px; font-weight: 800; }
+  .stats small { font-size: 9.5px; color: rgba(255,255,255,.7); }
+  .shot { border-radius: 10px 10px 0 0; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.18); border-bottom: 0; }
+  .shot img { display: block; width: 100%; }
+  .heroShot { margin-top: 4px; height: 3.7in; }
+  .heroShot img { width: 100%; }
+
+  /* Features */
+  .body { padding: 0.32in 0.55in 0; flex: 1; display: flex; flex-direction: column; }
+  .sectionHead { display: flex; justify-content: space-between; align-items: baseline; }
+  h2 { font-size: 17px; letter-spacing: -0.02em; font-weight: 750; }
+  .sectionHead p { font-size: 10.5px; color: var(--muted); }
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+  .f { border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px; background: #fff; border-top: 3px solid var(--c); }
+  .f .ic { width: 26px; height: 26px; border-radius: 7px; background: var(--c); display: grid; place-items: center; }
+  .f .ic svg { width: 15px; height: 15px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .f h3 { font-size: 12.5px; font-weight: 700; margin-top: 8px; }
+  .f p { font-size: 9.8px; line-height: 1.5; color: var(--ink-2); margin-top: 4px; }
+
+  /* Bottom band */
+  .band { display: grid; grid-template-columns: 1fr 3.35in; gap: 0.28in; margin-top: 0.24in; align-items: start; }
+  .steps { list-style: none; counter-reset: s; display: grid; gap: 8px; margin-top: 10px; }
+  .steps li { counter-increment: s; display: grid; grid-template-columns: 22px 1fr; gap: 9px; align-items: start; font-size: 10.2px; line-height: 1.45; color: var(--ink-2); }
+  .steps li::before { content: counter(s); width: 22px; height: 22px; border-radius: 50%; background: var(--brand); color: var(--accent); font-weight: 800; font-size: 10.5px; display: grid; place-items: center; }
+  .steps b { color: var(--ink); }
+  .stages { display: flex; gap: 3px; margin-top: 12px; }
+  .stages span { flex: 1; text-align: center; font-size: 8.6px; font-weight: 700; color: #fff; padding: 4px 0; border-radius: 4px; }
+  .reports { border-radius: 10px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(14,26,32,.12); height: 2.05in; }
+  .reports img { width: 100%; display: block; margin-top: -0.02in; }
+  .cap { font-size: 9px; color: var(--muted); margin-top: 6px; }
+
+  footer { margin-top: auto; background: var(--brand); color: #fff; padding: 0.2in 0.55in; display: flex; justify-content: space-between; align-items: center; }
+  footer strong { font-size: 14px; }
+  footer p { font-size: 10px; color: rgba(255,255,255,.72); margin-top: 2px; }
+  .url { background: var(--accent); color: var(--brand); font-weight: 800; font-size: 12px; padding: 9px 16px; border-radius: 99px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <section class="hero">
+    <div class="brand"><i>FQ</i> FenceQuote <span>Pro</span></div>
+    <div class="heroGrid">
+      <div>
+        <p class="eyebrow">Estimating &amp; e-sign for fence contractors</p>
+        <h1>Quote faster.<br>Get signed <em>sooner.</em><br>Keep your margin.</h1>
+        <p class="lede">Price fence jobs from your own price book, send a branded proposal customers sign on their phone, and see what every job earns.</p>
+        <div class="stats">
+          <div><b>Minutes</b><small>to a proposal</small></div>
+          <div><b>Any device</b><small>for signing</small></div>
+          <div><b>Live</b><small>margin tracking</small></div>
+        </div>
+      </div>
+      <div class="shot heroShot"><img src="hero-shot.png" alt=""></div>
+    </div>
+  </section>
+
+  <section class="body">
+    <div class="sectionHead">
+      <h2>Everything you need to win the job</h2>
+      <p>Built for owners, managers and sales reps</p>
+    </div>
+    <div class="features">
+      <div class="f" style="--c:#2a78d6">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6"/></svg></div>
+        <h3>Fast estimate builder</h3>
+        <p>Add fence runs by the foot, gates and add-ons. Posts, concrete, labor, discounts, tax and deposit are calculated for you.</p>
+      </div>
+      <div class="f" style="--c:#008300">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
+        <h3>Built-in e-signature</h3>
+        <p>Send a secure link by email or text. Customers draw or type a signature, with no account needed. Each signature is saved with an audit trail.</p>
+      </div>
+      <div class="f" style="--c:#eda100">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg></div>
+        <h3>Know when they look</h3>
+        <p>See the moment a customer opens a proposal. "Up next" tells you who to call, who to remind and what's ready to send.</p>
+      </div>
+      <div class="f" style="--c:#6250d6">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
+        <h3>Your price book</h3>
+        <p>Set materials, gates and add-ons with your own costs and sell prices. A live margin preview shows the profit before you save.</p>
+      </div>
+      <div class="f" style="--c:#e34948">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0"/></svg></div>
+        <h3>Margin protection</h3>
+        <p>Set a minimum gross margin. Quotes below it need manager approval, and sales reps never see your costs.</p>
+      </div>
+      <div class="f" style="--c:#1baf7a">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+        <h3>Secure team access</h3>
+        <p>Single sign-on through Cloudflare Access, with owner, manager and sales roles. It runs on Cloudflare's global network.</p>
+      </div>
+    </div>
+
+    <div class="band">
+      <div>
+        <h2>From driveway to signed deal</h2>
+        <ol class="steps">
+          <li><span><b>Measure &amp; build.</b> Pick materials from your price book and add gates and extras on site.</span></li>
+          <li><span><b>Send a branded proposal.</b> Your logo, line items, terms and deposit go out in one link.</span></li>
+          <li><span><b>Customer signs online.</b> They approve or decline with a reason, and you're notified right away.</span></li>
+          <li><span><b>Track &amp; report.</b> Follow the pipeline by stage, check win rate and margin, and export to CSV.</span></li>
+        </ol>
+        <div class="stages">
+          <span style="background:#2a78d6">Draft</span><span style="background:#1baf7a">Ready</span><span style="background:#6250d6">Sent</span><span style="background:#eda100">Viewed</span><span style="background:#008300">Signed</span>
+        </div>
+      </div>
+      <div>
+        <div class="reports"><img src="reports-shot.png" alt=""></div>
+        <p class="cap">Reports: dollars by stage, win rate and margin by material.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>
+      <strong>FenceQuote Pro</strong>
+      <p>Estimates, proposals and e-signatures for fence companies. Works on desktop, tablet and phone.</p>
+    </div>
+    <div class="url">fencepro.nextwin-os.com</div>
+  </footer>
+</div>
+</body>
+</html>
